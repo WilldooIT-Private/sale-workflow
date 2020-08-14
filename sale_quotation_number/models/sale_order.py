@@ -19,13 +19,18 @@ class SaleOrder(models.Model):
         return super().create(vals)
 
     @api.multi
+    def action_confirm(self):
+        quotes = self.filtered(lambda o: o.state in ('draft', 'sent')).ids
+        return super(SaleOrder, self.with_context(quotes=quotes)).action_confirm()
+
+    @api.multi
     def _action_confirm(self):
         # allocate new number before confirm - as reference on MTO orders
         # should be the sale number, not the quote number
         company = self.env['res.company']. \
             _company_default_get('sale.order')
         for order in self:
-            if order.state in ('draft', 'sent') and not company.keep_name_so:
+            if order.id in self.env.context.get('quotes') and not company.keep_name_so:
                 if order.origin and order.origin != '':
                     quo = order.origin + ', ' + order.name
                 else:
